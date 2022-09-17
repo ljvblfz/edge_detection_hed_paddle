@@ -1,14 +1,12 @@
-from math import ceil
-
-import numpy as np
 import paddle
 import paddle.nn as nn
-from paddle import ParamAttr
-from paddle.nn import Conv2D, Conv2DTranspose
 import paddle.nn.functional as F
+from paddle import ParamAttr
+from paddle.nn import Conv2D
 
 from utils import load_pretrained_model
 from vgg import VGG16
+
 
 class HED(nn.Layer):
     def __init__(self, pretrained=None, backbone_pretrained=None):
@@ -105,8 +103,8 @@ class HEDHead(nn.Layer):
         scores = [score1, score2, score3, score4, score5]
         return [self.combine(paddle.concat(scores, axis=1))] + scores
 
+
 if __name__ == '__main__':
     model = HED()
     y = model(paddle.rand([1,3,224,224]))
     pass
-
