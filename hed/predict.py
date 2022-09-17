@@ -65,7 +65,7 @@ def infer(args):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Model training')
+    parser = argparse.ArgumentParser(description='Model testing')
     # params of testing
 
     parser.add_argument(
