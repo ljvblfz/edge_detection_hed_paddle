@@ -9,6 +9,76 @@ from hed_model import HED
 from transforms import Normalize, Resize, RandomDistort, RandomHorizontalFlip, RandomVerticalFlip
 
 
+def train(model, dataloader, optimizer, loss_fn):
+    iter = 0
+    batch_start = time.time()
+    while iter < iters:
+        for data in dataloader:
+            iter += 1
+            if iter > iters:
+                break
+            images = data[0]
+            labels = data[1]
+            logits_list = model(images)
+            loss_list = []
+            for logits in logits_list:
+                loss = bce_loss(logits, labels)
+                loss_list.append(loss)
+            loss = sum(loss_list)
+            loss.backward()
+            optimizer.step()
+            model.clear_gradients()
+
+            lr = optimizer.get_lr()
+
+            # update lr
+            if isinstance(optimizer, paddle.distributed.fleet.Fleet):
+                lr_sche = optimizer.user_defined_optimizer._learning_rate
+            else:
+                lr_sche = optimizer._learning_rate
+            if isinstance(lr_sche, paddle.optimizer.lr.LRScheduler):
+                lr_sche.step()
+
+            avg_loss += loss.numpy()[0]
+            if not avg_loss_list:
+                avg_loss_list = [l.numpy() for l in loss_list]
+            else:
+                for i in range(len(loss_list)):
+                    avg_loss_list[i] += loss_list[i].numpy()
+            batch_cost_averager.record(
+                time.time() - batch_start, num_samples=batch_size)
+
+            if (iter) % log_iters == 0:
+                avg_loss /= log_iters
+                avg_loss_list = [l[0] / log_iters for l in avg_loss_list]
+                remain_iters = iters - iter
+                avg_train_batch_cost = batch_cost_averager.get_average()
+                avg_train_reader_cost = reader_cost_averager.get_average()
+                eta = calculate_eta(remain_iters, avg_train_batch_cost)
+                logger.info(
+                    "[TRAIN] epoch: {}, iter: {}/{}, loss: {:.4f}, lr: {:.10f}, batch_cost: {:.4f}, reader_cost: {:.5f}, ips: {:.4f} samples/sec | ETA {}"
+                    .format((iter - 1) // iters_per_epoch + 1, iter, iters,
+                            avg_loss, lr, avg_train_batch_cost,
+                            avg_train_reader_cost,
+                            batch_cost_averager.get_ips_average(), eta))
+
+                avg_loss = 0.0
+                avg_loss_list = []
+                reader_cost_averager.reset()
+                batch_cost_averager.reset()
+
+            if (iter % save_interval == 0 or iter == iters):
+                current_save_dir = os.path.join(save_dir,
+                                                "iter_{}".format(iter))
+                if not os.path.isdir(current_save_dir):
+                    os.makedirs(current_save_dir)
+                paddle.save(model.state_dict(),
+                            os.path.join(current_save_dir, 'model.pdparams'))
+                paddle.save(optimizer.state_dict(),
+                            os.path.join(current_save_dir, 'model.pdopt'))
+            batch_start = time.time()
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Model training')
     # params of training
@@ -126,89 +196,7 @@ def main(args):
     optimizer = paddle.optimizer.Momentum(
         learning_rate=lr, parameters=model.parameters(), weight_decay=2e-4)
 
-    iter = 0
-    batch_start = time.time()
-    while iter < iters:
-
-        dataset = Dataset(
-            transforms=transforms,
-            dataset_root=dataset_root,
-            train_path=os.path.join(dataset_root, "train_pair.lst"))
-
-        batch_sampler = paddle.io.DistributedBatchSampler(
-            dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-
-        loader = paddle.io.DataLoader(
-            dataset,
-            batch_sampler=batch_sampler,
-            num_workers=0,
-            return_list=True,
-        )
-
-        for data in loader:
-            iter += 1
-            if iter > iters:
-                break
-            images = data[0]
-            labels = data[1]
-            logits_list = model(images)
-            loss_list = []
-            for logits in logits_list:
-                loss = bce_loss(logits, labels)
-                loss_list.append(loss)
-            loss = sum(loss_list)
-            loss.backward()
-            optimizer.step()
-            model.clear_gradients()
-
-            lr = optimizer.get_lr()
-
-            # update lr
-            if isinstance(optimizer, paddle.distributed.fleet.Fleet):
-                lr_sche = optimizer.user_defined_optimizer._learning_rate
-            else:
-                lr_sche = optimizer._learning_rate
-            if isinstance(lr_sche, paddle.optimizer.lr.LRScheduler):
-                lr_sche.step()
-
-            avg_loss += loss.numpy()[0]
-            if not avg_loss_list:
-                avg_loss_list = [l.numpy() for l in loss_list]
-            else:
-                for i in range(len(loss_list)):
-                    avg_loss_list[i] += loss_list[i].numpy()
-            batch_cost_averager.record(
-                time.time() - batch_start, num_samples=batch_size)
-
-            if (iter) % log_iters == 0:
-                avg_loss /= log_iters
-                avg_loss_list = [l[0] / log_iters for l in avg_loss_list]
-                remain_iters = iters - iter
-                avg_train_batch_cost = batch_cost_averager.get_average()
-                avg_train_reader_cost = reader_cost_averager.get_average()
-                eta = calculate_eta(remain_iters, avg_train_batch_cost)
-                logger.info(
-                    "[TRAIN] epoch: {}, iter: {}/{}, loss: {:.4f}, lr: {:.10f}, batch_cost: {:.4f}, reader_cost: {:.5f}, ips: {:.4f} samples/sec | ETA {}"
-                    .format((iter - 1) // iters_per_epoch + 1, iter, iters,
-                            avg_loss, lr, avg_train_batch_cost,
-                            avg_train_reader_cost,
-                            batch_cost_averager.get_ips_average(), eta))
-
-                avg_loss = 0.0
-                avg_loss_list = []
-                reader_cost_averager.reset()
-                batch_cost_averager.reset()
-
-            if (iter % save_interval == 0 or iter == iters):
-                current_save_dir = os.path.join(save_dir,
-                                                "iter_{}".format(iter))
-                if not os.path.isdir(current_save_dir):
-                    os.makedirs(current_save_dir)
-                paddle.save(model.state_dict(),
-                            os.path.join(current_save_dir, 'model.pdparams'))
-                paddle.save(optimizer.state_dict(),
-                            os.path.join(current_save_dir, 'model.pdopt'))
-            batch_start = time.time()
+    train(model, loader, optimizer, loss_fn=bce_loss)
 
 
 if __name__ == '__main__':
