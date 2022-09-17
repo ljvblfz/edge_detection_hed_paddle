@@ -20,32 +20,6 @@ def tensor_flip(x, flip):
     return x
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Model training')
-    # params of testing
-
-    parser.add_argument(
-        '--pretrained_model',
-        dest='pretrained_model',
-        help='The directory for pretrained model',
-        type=str,
-        default='/Users/alex/Downloads/model_hed.pdparams')
-    parser.add_argument(
-        '--dataset',
-        dest='dataset',
-        help='The directory for test dataset',
-        type=str,
-        default='/Users/alex/baidu/HED-BSDS/test/')
-    parser.add_argument(
-        '--save_dir',
-        dest='save_dir',
-        help='The directory for saving the model snapshot',
-        type=str,
-        default='./output/result')
-
-    return parser.parse_args()
-
-
 def infer(args):
     model = HED()
     load_pretrained_model(model, args.pretrained_model)
@@ -88,6 +62,32 @@ def infer(args):
         cv2.imwrite(os.path.join(target_path, "{}".format(fn) + '.png'), edge)
         print("Saving to '" + os.path.join(target_path, image_list[i][0:-4]) +
               "', Processing %d of %d..." % (i + 1, nimgs))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Model training')
+    # params of testing
+
+    parser.add_argument(
+        '--pretrained_model',
+        dest='pretrained_model',
+        help='The directory for pretrained model',
+        type=str,
+        default='/Users/alex/Downloads/model_hed.pdparams')
+    parser.add_argument(
+        '--dataset',
+        dest='dataset',
+        help='The directory for test dataset',
+        type=str,
+        default='/Users/alex/baidu/HED-BSDS/test/')
+    parser.add_argument(
+        '--save_dir',
+        dest='save_dir',
+        help='The directory for saving the model snapshot',
+        type=str,
+        default='./output/result')
+
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
