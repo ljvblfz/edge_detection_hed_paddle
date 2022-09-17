@@ -15,12 +15,12 @@
 import os
 import random
 
-import paddle
 import numpy as np
+import paddle
 from PIL import Image
 
 from transforms import Compose
-import transforms.functional as F
+
 
 class Dataset(paddle.io.Dataset):
     """
@@ -163,7 +163,6 @@ class Dataset(paddle.io.Dataset):
             label[label != 0] = 1
             return im.astype('float32'), label.astype('float32')
 
-
     def __len__(self):
         return len(self.file_list)
 
@@ -186,4 +185,3 @@ if __name__ == '__main__':
     for data in loader:
         images = data[0]
         labels = data[1].astype('int64')
-
