@@ -1,6 +1,6 @@
+import argparse
 import glob
 import os
-import argparse
 
 import cv2
 import numpy as np
