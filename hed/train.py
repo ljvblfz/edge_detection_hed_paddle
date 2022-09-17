@@ -1,14 +1,11 @@
-import os
-import time
 import argparse
+import os
 
 import paddle
 
-import logger
 from binary_cross_entropy_loss import BCELoss
 from dataset import Dataset
 from hed_model import HED
-from timer import TimeAverager, calculate_eta
 from transforms import Normalize, Resize, RandomDistort, RandomHorizontalFlip, RandomVerticalFlip
 
 
@@ -21,48 +18,55 @@ def parse_args():
         help='iters for training',
         type=int,
         default=100000)
-    parser.add_argument(
-        '--batch_size',
-        dest='batch_size',
-        help='Mini batch size of one gpu or cpu',
-        type=int,
-        default=10)
-    parser.add_argument(
-        '--learning_rate',
-        dest='learning_rate',
-        help='Learning rate',
-        type=float,
-        default=1e-4)
-    parser.add_argument(
-        '--save_interval',
-        dest='save_interval',
-        help='How many iters to save a model snapshot once during training.',
-        type=int,
-        default=1000)
+
     parser.add_argument(
         '--pretrained_model',
         dest='pretrained_model',
         help='The directory for pretrained model',
         type=str,
         default='vgg16.pdparams')
+
+    parser.add_argument(
+        '--batch_size',
+        dest='batch_size',
+        help='Mini batch size of one gpu or cpu',
+        type=int,
+        default=10)
+
     parser.add_argument(
         '--dataset',
         dest='dataset',
         help='The directory for train dataset',
         type=str,
         default='/Users/alex/baidu/HED-BSDS')
+
     parser.add_argument(
-        '--save_dir',
-        dest='save_dir',
-        help='The directory for saving the model snapshot',
-        type=str,
-        default='./output')
+        '--learning_rate',
+        dest='learning_rate',
+        help='Learning rate',
+        type=float,
+        default=1e-4)
+
     parser.add_argument(
         '--log_iters',
         dest='log_iters',
         help='Display logging information at every log_iters',
         default=10,
         type=int)
+
+    parser.add_argument(
+        '--save_interval',
+        dest='save_interval',
+        help='How many iters to save a model snapshot once during training.',
+        type=int,
+        default=1000)
+
+    parser.add_argument(
+        '--save_dir',
+        dest='save_dir',
+        help='The directory for saving the model snapshot',
+        type=str,
+        default='./output')
 
     return parser.parse_args()
 
