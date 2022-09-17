@@ -1,6 +1,6 @@
+import argparse
 import glob
 import os
-import argparse
 
 import cv2
 import numpy as np
@@ -20,43 +20,11 @@ def tensor_flip(x, flip):
     return x
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Model training')
-    # params of testing
-
-    parser.add_argument(
-        '--pretrained_model',
-        dest='pretrained_model',
-        help='The directory for pretrained model',
-        type=str,
-        default='/Users/alex/Downloads/model_hed.pdparams')
-    parser.add_argument(
-        '--dataset',
-        dest='dataset',
-        help='The directory for test dataset',
-        type=str,
-        default='/Users/alex/baidu/HED-BSDS/test/')
-    parser.add_argument(
-        '--save_dir',
-        dest='save_dir',
-        help='The directory for saving the model snapshot',
-        type=str,
-        default='./output/result')
-
-    return parser.parse_args()
-
-
-def infer(args):
-    model = HED()
-    load_pretrained_model(model, args.pretrained_model)
-    model.eval()
-    target_path = args.save_dir
-    test_path = args.dataset
-    image_list = glob.glob(test_path + "*.jpg")
-    nimgs = len(image_list)
-    print("totally {} images".format(nimgs))
-    for i in range(nimgs):
-        img = image_list[i]
+def infer(model, test_image_list, generated_edge_save_dir):
+    n_imgs = len(test_image_list)
+    print("totally {} images".format(n_imgs))
+    for i in range(n_imgs):
+        img = test_image_list[i]
         img = cv2.imread(img).astype(np.float32)
         h, w, _ = img.shape
         edge = np.zeros((h, w), np.float32)
@@ -82,14 +50,52 @@ def infer(args):
         edge /= (len(scales) * len(flips))
         edge = edge / edge.max()
         edge *= 255.0
-        fn, ext = os.path.splitext(image_list[i])
+        fn, ext = os.path.splitext(test_image_list[i])
         fn = fn.split('/')[-1]
 
-        cv2.imwrite(os.path.join(target_path, "{}".format(fn) + '.png'), edge)
-        print("Saving to '" + os.path.join(target_path, image_list[i][0:-4]) +
-              "', Processing %d of %d..." % (i + 1, nimgs))
+        cv2.imwrite(os.path.join(generated_edge_save_dir, "{}".format(fn) + '.png'), edge)
+        print("Saving to '" + os.path.join(generated_edge_save_dir, test_image_list[i][0:-4]) +
+              "', Processing %d of %d..." % (i + 1, n_imgs))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Model testing')
+    # params of testing
+
+    parser.add_argument(
+        '--pretrained_model',
+        dest='pretrained_model',
+        help='The directory for pretrained model',
+        type=str,
+        default='/Users/alex/Downloads/model_hed.pdparams')
+    parser.add_argument(
+        '--dataset',
+        dest='dataset',
+        help='The directory for test dataset',
+        type=str,
+        default='/Users/alex/baidu/HED-BSDS/test/')
+    parser.add_argument(
+        '--save_dir',
+        dest='save_dir',
+        help='The directory for saving the model snapshot',
+        type=str,
+        default='./output/result')
+
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    model = HED()
+    load_pretrained_model(model, args.pretrained_model)
+    model.eval()
+    target_path = args.save_dir
+    test_path = args.dataset
+    image_list = glob.glob(test_path + "*.jpg")
+
+    infer(model, image_list, target_path)
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    infer(args)
+    main()

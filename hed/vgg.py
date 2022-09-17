@@ -1,9 +1,10 @@
 import paddle
-from paddle import ParamAttr
 import paddle.nn as nn
 import paddle.nn.functional as F
-from paddle.nn import Conv2D, BatchNorm, Linear, Dropout
-from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
+from paddle import ParamAttr
+from paddle.nn import Conv2D
+from paddle.nn import MaxPool2D
+
 from utils import load_pretrained_model
 
 __all__ = ["VGG11", "VGG13", "VGG16", "VGG19"]
@@ -41,8 +42,8 @@ class ConvBlock(nn.Layer):
                                       learning_rate=lr,
                                       regularizer=paddle.regularizer.L2Decay(2e-4)),
                 bias_attr=ParamAttr(name=name + "2_bias",
-                                learning_rate=lr * 2.0,
-                                regularizer=paddle.regularizer.L2Decay(0)))
+                                    learning_rate=lr * 2.0,
+                                    regularizer=paddle.regularizer.L2Decay(0)))
         if groups == 3 or groups == 4:
             self._conv_3 = Conv2D(
                 in_channels=output_channels,
@@ -55,8 +56,8 @@ class ConvBlock(nn.Layer):
                                       regularizer=paddle.regularizer.L2Decay(2e-4)
                                       ),
                 bias_attr=ParamAttr(name=name + "3_bias",
-                                learning_rate=lr * 2.0,
-                                regularizer=paddle.regularizer.L2Decay(0)))
+                                    learning_rate=lr * 2.0,
+                                    regularizer=paddle.regularizer.L2Decay(0)))
         if groups == 4:
             self._conv_4 = Conv2D(
                 in_channels=output_channels,
@@ -69,8 +70,8 @@ class ConvBlock(nn.Layer):
                                       regularizer=paddle.regularizer.L2Decay(2e-4)
                                       ),
                 bias_attr=ParamAttr(name=name + "4_bias",
-                                learning_rate=lr * 2.0,
-                                regularizer=paddle.regularizer.L2Decay(0)))
+                                    learning_rate=lr * 2.0,
+                                    regularizer=paddle.regularizer.L2Decay(0)))
 
         self._pool = MaxPool2D(kernel_size=2, stride=2, padding=0)
 
@@ -114,8 +115,8 @@ class VGGNet(nn.Layer):
         self._conv_block_5 = ConvBlock(512, 512, self.groups[4], 5, name="conv5_")
 
         for idx, block in enumerate([
-                self._conv_block_1, self._conv_block_2, self._conv_block_3,
-                self._conv_block_4, self._conv_block_5
+            self._conv_block_1, self._conv_block_2, self._conv_block_3,
+            self._conv_block_4, self._conv_block_5
         ]):
             if self.stop_grad_layers >= idx + 1:
                 for param in block.parameters():
@@ -157,13 +158,14 @@ def VGG19(**args):
     model = VGGNet(layers=19, **args)
     return model
 
-import numpy as np
 
 def export_weight_names(net):
     print(net.state_dict().keys())
     with open('paddle_vgg.txt', 'w') as f:
         for key in net.state_dict().keys():
             f.write(key + '\n')
+
+
 if __name__ == '__main__':
     model = VGG16()
     export_weight_names(model)
