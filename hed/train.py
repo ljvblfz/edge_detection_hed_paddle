@@ -122,6 +122,12 @@ def parse_args():
         type=str,
         default='./output')
 
+    parser.add_argument(
+        '--resume-from',
+        dest='resume_from',
+        help='the checkpoint file to resume from'
+    )
+
     return parser.parse_args()
 
 
@@ -213,6 +219,13 @@ def main():
         Checkpointer(model, optimizer, save_dir=save_dir)
     ]
     hooks = ComposeCallback(callbacks)
+
+    if resume:
+        checkpoint_path = config['checkpoint']
+        checkpoint = paddle.load(checkpoint_path)
+        model.set_state_dict(checkpoint['model_state_dict'])
+        optimizer.set_state_dict(checkpoint['optimizer_state_dict'])
+        start_epoch = checkpoint['epoch'] + 1
 
     train(model, loader, optimizer, loss_fn=bce_loss, hooks=hooks,
           start_epoch=start_epoch, epochs=epochs)
